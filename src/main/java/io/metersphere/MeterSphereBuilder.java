@@ -45,6 +45,7 @@ public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Seri
     private String testPlanName;
     private String testCaseId;
     private String testCaseName;
+    private String runEnv;
     private String method;
     private String result;
     private String mode; //运行模式
@@ -67,7 +68,8 @@ public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Seri
         listener.getLogger().println("number=" + run.getNumber());
         listener.getLogger().println("url=" + run.getUrl());
         final MeterSphereClient client = new MeterSphereClient(this.msAccessKey, this.msSecretKey, this.msEndpoint);
-        log("执行方式: " + method);
+        log("执行方式11: " + method);
+        log("运行环境：" + runEnv);
         try {
             List<TestCaseDTO> testCases;
             Optional<TestCaseDTO> firstCase;
@@ -479,6 +481,11 @@ public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Seri
     }
 
     @DataBoundSetter
+    public void setRunEnv(String runEnv) {
+        this.runEnv = runEnv;
+    }
+
+    @DataBoundSetter
     public void setMode(String mode) {
         this.mode = StringUtils.isBlank(mode) ? "serial" : mode;
     }
@@ -539,6 +546,10 @@ public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Seri
 
     public String getResult() {
         return result;
+    }
+
+    public String getRunEnv() {
+        return runEnv;
     }
 
     public String getMode() {

@@ -1,2 +1,3 @@
+<?jelly escape-by-default='true'?>
 <div>
  This plugin integrates <a href="https://rdmetersphere.fit2cloud.com">MeterSphere</a> - the cloud load testing service to Jenkins.</div>

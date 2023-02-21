@@ -54,6 +54,9 @@
             </f:entry>
         </f:radioBlock>
     </f:section>
+    <f:entry title="运行环境" field="runEnv">
+            <f:textbox/>
+    </f:entry>
     <f:section title="运行模式">
         <f:radioBlock title="串行" name="mode" value="serial" inline="true"
                       checked="${instance.mode == 'serial'}">

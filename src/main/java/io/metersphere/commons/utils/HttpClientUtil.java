@@ -11,6 +11,7 @@ import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
 import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.entity.ContentType;
+import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
@@ -23,6 +24,10 @@ import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -203,5 +208,87 @@ public class HttpClientUtil {
         }
     }
 
+    public static class BodyPart {
+        private String name;
+        private String filename;
+        private String contentType;
+        private String bodyString;
 
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getFilename() {
+            return filename;
+        }
+
+        public void setFilename(String filename) {
+            this.filename = filename;
+        }
+
+        public String getContentType() {
+            return contentType;
+        }
+
+        public void setContentType(String contentType) {
+            this.contentType = contentType;
+        }
+
+        public String getBodyString() {
+            return bodyString;
+        }
+
+        public void setBodyString(String bodyString) {
+            this.bodyString = bodyString;
+        }
+    }
+
+    public static String post(String url, List<BodyPart> bodyParts, HttpClientConfig config) {
+        CloseableHttpClient httpClient = buildHttpClient(url);
+        HttpPost httpPost = new HttpPost(url);
+        if (config == null) {
+            config = new HttpClientConfig();
+        }
+        try {
+            httpPost.setConfig(config.buildRequestConfig());
+
+            Map<String, String> header = config.getHeader();
+            for (String key : header.keySet()) {
+                httpPost.addHeader(key, header.get(key));
+            }
+
+            if (bodyParts != null && bodyParts.size() > 0) {
+                MultipartEntityBuilder multipartEntityBuilder = MultipartEntityBuilder.create();
+                multipartEntityBuilder.setCharset(StandardCharsets.UTF_8);
+                for (BodyPart bodyPart : bodyParts) {
+                    InputStream is = new ByteArrayInputStream(bodyPart.bodyString.getBytes(StandardCharsets.UTF_8));
+                    multipartEntityBuilder.addBinaryBody(bodyPart.name, is, ContentType.getByMimeType(bodyPart.contentType), bodyPart.filename);
+                }
+
+                try {
+                    httpPost.setEntity(multipartEntityBuilder.build());
+                } catch (Exception e) {
+                    logger.error("HttpClient转换编码错误", e);
+                    throw new RuntimeException("HttpClient转换编码错误", e);
+                }
+            }
+
+            HttpResponse response = httpClient.execute(httpPost);
+            HttpEntity entity = response.getEntity();
+            return EntityUtils.toString(entity, config.getCharset());
+        } catch (Exception e) {
+            logger.error("HttpClient查询失败", e);
+            throw new RuntimeException("HttpClient查询失败", e);
+        } finally {
+            try {
+                httpClient.close();
+            } catch (Exception e) {
+                logger.error("HttpClient关闭连接失败", e);
+            }
+        }
+    }
 }

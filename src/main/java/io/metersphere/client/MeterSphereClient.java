@@ -12,6 +12,7 @@ import io.metersphere.commons.utils.HttpClientUtil;
 import io.metersphere.commons.utils.LogUtil;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.entity.ContentType;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
@@ -127,6 +128,29 @@ public class MeterSphereClient {
         String listJson = JSON.toJSONString(result.getData());
         LogUtil.debug("该项目下的环境列表" + listJson);
         return JSON.parseArray(listJson, ApiTestEnvironmentDTO.class);
+    }
+
+    /*添加新的环境*/
+    public String addEnvironment(String projectId, String name, String config) {
+        HashMap<String, Object> params = new HashMap<>();
+        params.put("projectId", projectId);
+        params.put("name", name);
+        params.put("id", null);
+        params.put("config", config);
+
+        HttpClientUtil.BodyPart bodyPart = new HttpClientUtil.BodyPart();
+        bodyPart.setName("request");
+        bodyPart.setFilename("blob");
+        bodyPart.setBodyString(JSON.toJSONString(params));
+        bodyPart.setContentType(ContentType.APPLICATION_JSON.getMimeType());
+        ResultHolder result = call(ApiUrlConstants.ENVIRONMEN_ADD, RequestMethod.POST_FORM_DATA, Collections.singletonList(bodyPart));
+        LogUtil.debug("添加环境结果" + result.getData());
+        return JSON.toJSONString(result.getData());
+    }
+
+    public String deleteEnvironment(String environmentId) {
+        ResultHolder result = call(ApiUrlConstants.ENVIRONMEN_DELETE + "/" + environmentId);
+        return JSON.toJSONString(result.getData());
     }
 
     /*查询该项目下所有测试计划*/
@@ -333,6 +357,8 @@ public class MeterSphereClient {
         HttpClientConfig config = auth();
         if (requestMethod.equals(RequestMethod.GET)) {
             responseJson = HttpClientUtil.get(url, config);
+        } else if (requestMethod.equals(RequestMethod.POST_FORM_DATA)) {
+            responseJson = HttpClientUtil.post(url, (List<HttpClientUtil.BodyPart>) params, config);
         } else {
             responseJson = HttpClientUtil.post(url, JSON.toJSONString(params), config);
         }
@@ -347,8 +373,7 @@ public class MeterSphereClient {
     private HttpClientConfig auth() {
         HttpClientConfig httpClientConfig = new HttpClientConfig();
         httpClientConfig.addHeader("Accept", ACCEPT);
-        httpClientConfig.addHeader("accessKey", accessKey);
-        httpClientConfig.addHeader("Content-type", "application/json");
+        httpClientConfig.addHeader("AccessKey", accessKey);
         String signature;
         try {
             signature = aesEncrypt(accessKey + "|" + UUID.randomUUID().toString() + "|" + System.currentTimeMillis(), secretKey, accessKey);
