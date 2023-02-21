@@ -25,7 +25,9 @@ public class ApiUrlConstants {
     public static final String API_TES_RESULT = "/api/api/testcase/get-details";//查询单接口用例执行结果
     public static final String API_SHARE_GENERATE = "/api/share/generate/expired";//查询单接口用例执行结果
     public static final String API_LICENSE_VALIDATE = "/api/license/validate";//查询单接口用例执行结果
-    public static final String ENVIRONMEN_LIST = "/api/api/environment/list";//环境列表
+    public static final String ENVIRONMEN_LIST = "/project/environment/list";//环境列表
+    public static final String ENVIRONMEN_ADD = "/project/environment/add";//添加环境
+    public static final String ENVIRONMEN_DELETE = "/project/environment/delete";//删除环境
     public static final String TEST_POOL = "/setting/testresourcepool/list/quota/valid";
     public static final String TEST_PLAN = "/track/test/plan/run";//测试计划执行
     public static final String TEST_PLAN_STATUS = "/track/test/plan/report/status";//测试计划执行
