@@ -1,5 +1,8 @@
 package io.metersphere;
 
+import com.alibaba.fastjson.JSON;
+import com.baicizhan.mall.EnvironmentManager;
+import com.baicizhan.mall.LogicException;
 import hudson.*;
 import hudson.model.*;
 import hudson.tasks.BuildStepDescriptor;
@@ -25,9 +28,7 @@ import org.kohsuke.stapler.StaplerRequest;
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Serializable {
 
@@ -46,6 +47,7 @@ public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Seri
     private String testCaseId;
     private String testCaseName;
     private String runEnv;
+    private String customizedVars;
     private String method;
     private String result;
     private String mode; //运行模式
@@ -68,15 +70,22 @@ public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Seri
         listener.getLogger().println("number=" + run.getNumber());
         listener.getLogger().println("url=" + run.getUrl());
         final MeterSphereClient client = new MeterSphereClient(this.msAccessKey, this.msSecretKey, this.msEndpoint);
-        log("执行方式11: " + method);
+        final EnvironmentManager environmentManager = new EnvironmentManager(client);
+
+        log("执行方式: " + method);
         log("运行环境：" + runEnv);
+        log("自定义变量：" + customizedVars);
+        String tempRunEnv = runEnv + UUID.randomUUID();
+        log("临时运行环境：" + tempRunEnv);
+        String realProjectId = null;
         try {
+
             List<TestCaseDTO> testCases;
             Optional<TestCaseDTO> firstCase;
             EnvVars environment = run.getEnvironment(listener);
 
             // 找到实际的project
-            String realProjectId = this.projectId;
+            realProjectId = this.projectId;
             if (StringUtils.equals(projectType, "projectName")) {
                 realProjectId = Util.replaceMacro(this.projectName, environment);
                 if (StringUtils.isNotBlank(realProjectId)) {
@@ -92,13 +101,23 @@ public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Seri
                     realProjectId = projectId;
                 }
             }
+            //创建运行环境
+            Map<String, String> variableOverrideMap = new HashMap<>();
+            JSON.parseObject(customizedVars).forEach((key, value) -> {
+                variableOverrideMap.put(key, value.toString());
+            });
+            environmentManager.copyEnvironmentAndSetVariables(realProjectId, runEnv, tempRunEnv, variableOverrideMap);
+            ApiTestEnvironmentDTO tempRunEnvDTO = environmentManager.findEnvironmentByName(realProjectId, tempRunEnv);
+            Map<String, String> envMap = new HashMap<>();
+            envMap.put(projectId, tempRunEnvDTO.getId());
+
             if (!client.checkLicense()) {
                 openMode = "auth";
             }
             boolean result = false;
             switch (method) {
                 case Method.TEST_PLAN:
-                    result = MeterSphereUtils.runTestPlan(run, client, realProjectId, mode, testPlanId, resourcePoolId, openMode);
+                    result = MeterSphereUtils.runTestPlan(client, realProjectId, mode, testPlanId, resourcePoolId, openMode, envMap);
                     break;
                 case Method.TEST_PLAN_NAME:
                     String testPlanName = Util.replaceMacro(this.testPlanName, environment);
@@ -113,7 +132,7 @@ public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Seri
                         run.setResult(Result.FAILURE);
                         return;
                     }
-                    result = MeterSphereUtils.runTestPlan(run, client, realProjectId, mode, first.get().getId(), resourcePoolId, openMode);
+                    result = MeterSphereUtils.runTestPlan(client, realProjectId, mode, first.get().getId(), resourcePoolId, openMode, envMap);
                     break;
                 case Method.SINGLE:
                     testCases = client.getTestCases(realProjectId);//项目下
@@ -149,8 +168,15 @@ public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Seri
             // 使用case的结果
             run.setResult(result ? Result.SUCCESS : Result.FAILURE);
         } catch (Exception e) {
+            listener.getLogger().println(e);
             run.setResult(Result.FAILURE);
             log("该测试请求未能通过，登陆MeterSphere网站查看该报告结果");
+        } finally {
+            try {
+                environmentManager.deleteEnvironment(realProjectId, tempRunEnv);
+            } catch (LogicException e) {
+                log("删除环境失败：" + tempRunEnv);
+            }
         }
 
     }
@@ -486,6 +512,11 @@ public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Seri
     }
 
     @DataBoundSetter
+    public void setCustomizedVars(String customizedVars) {
+        this.customizedVars = customizedVars;
+    }
+
+    @DataBoundSetter
     public void setMode(String mode) {
         this.mode = StringUtils.isBlank(mode) ? "serial" : mode;
     }
@@ -551,6 +582,11 @@ public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Seri
     public String getRunEnv() {
         return runEnv;
     }
+
+    public String getCustomizedVars() {
+        return customizedVars;
+    }
+
 
     public String getMode() {
         return mode;

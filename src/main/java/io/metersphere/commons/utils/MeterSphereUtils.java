@@ -2,7 +2,6 @@ package io.metersphere.commons.utils;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.TypeReference;
-import hudson.model.Run;
 import io.metersphere.client.MeterSphereClient;
 import io.metersphere.commons.constants.Results;
 import io.metersphere.commons.model.MsExecResponseDTO;
@@ -198,10 +197,10 @@ public class MeterSphereUtils {
         return flag;
     }
 
-    public static boolean runTestPlan(Run<?, ?> run, MeterSphereClient meterSphereClient, String projectId,
-                                      String mode, String testPlanId, String resourcePoolId, String openMode) throws InterruptedException {
+    public static boolean runTestPlan(MeterSphereClient meterSphereClient, String projectId,
+                                      String mode, String testPlanId, String resourcePoolId, String openMode, Map<String, String> envMap) throws InterruptedException {
         log("测试计划开始执行");
-        String id = meterSphereClient.exeTestPlan(projectId, testPlanId, mode, resourcePoolId);
+        String id = meterSphereClient.exeTestPlan(projectId, testPlanId, mode, resourcePoolId, envMap);
         log("生成测试报告id:" + id);
         String url = meterSphereClient.getBaseInfo();
         boolean flag = true;

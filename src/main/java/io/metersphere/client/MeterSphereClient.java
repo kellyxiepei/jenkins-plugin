@@ -10,6 +10,7 @@ import io.metersphere.commons.model.*;
 import io.metersphere.commons.utils.HttpClientConfig;
 import io.metersphere.commons.utils.HttpClientUtil;
 import io.metersphere.commons.utils.LogUtil;
+import io.metersphere.commons.utils.MeterSphereUtils;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.entity.ContentType;
@@ -170,7 +171,7 @@ public class MeterSphereClient {
     }
 
     /*执行测试计划*/
-    public String exeTestPlan(String projectId, String testPlanId, String mode, String resourcePoolId) {
+    public String exeTestPlan(String projectId, String testPlanId, String mode, String resourcePoolId, Map<String, String> envMap) {
         String userId = this.checkUser();
         HashMap<String, Object> params = new HashMap<>();
         params.put("testPlanId", testPlanId);
@@ -182,6 +183,10 @@ public class MeterSphereClient {
         params.put("onSampleError", false);
         params.put("requestOriginator", "TEST_PLAN");
         params.put("executionWay", "RUN");
+        if (envMap != null && envMap.size() > 0) {
+            params.put("envMap", envMap);
+            params.put("environmentType", "JSON");
+        }
         if (StringUtils.isEmpty(resourcePoolId)) {
             params.put("runWithinResourcePool", false);
         } else {
@@ -351,6 +356,10 @@ public class MeterSphereClient {
     }
 
     private ResultHolder call(String url, RequestMethod requestMethod, Object params) {
+        MeterSphereUtils.logger.println("=================Send Http Request==================");
+        MeterSphereUtils.logger.println("url:" + url);
+        MeterSphereUtils.logger.println("requestMethod:" + requestMethod);
+        MeterSphereUtils.logger.println("params:" + JSON.toJSONString(params));
         url = this.endpoint + url;
         String responseJson;
 
@@ -362,6 +371,8 @@ public class MeterSphereClient {
         } else {
             responseJson = HttpClientUtil.post(url, JSON.toJSONString(params), config);
         }
+
+        MeterSphereUtils.logger.println("responseJson:" + responseJson);
 
         ResultHolder result = JSON.parseObject(responseJson, ResultHolder.class);
         if (!result.isSuccess()) {
