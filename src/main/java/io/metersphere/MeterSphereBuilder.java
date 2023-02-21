@@ -69,6 +69,10 @@ public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Seri
         listener.getLogger().println("workspace=" + workspace);
         listener.getLogger().println("number=" + run.getNumber());
         listener.getLogger().println("url=" + run.getUrl());
+
+        EnvVars environment = run.getEnvironment(listener);
+        customizedVars = Util.replaceMacro(customizedVars, environment);
+
         final MeterSphereClient client = new MeterSphereClient(this.msAccessKey, this.msSecretKey, this.msEndpoint);
         final EnvironmentManager environmentManager = new EnvironmentManager(client);
 
@@ -82,7 +86,6 @@ public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Seri
 
             List<TestCaseDTO> testCases;
             Optional<TestCaseDTO> firstCase;
-            EnvVars environment = run.getEnvironment(listener);
 
             // 找到实际的project
             realProjectId = this.projectId;
