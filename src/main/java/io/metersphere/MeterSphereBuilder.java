@@ -43,9 +43,6 @@ public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Seri
     private String projectType;
     private String projectName;
     private String testPlanId;
-    private String testPlanName;
-    private String testCaseId;
-    private String testCaseName;
     private String runEnv;
     private String customizedVars;
     private String method;
@@ -122,48 +119,6 @@ public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Seri
                 case Method.TEST_PLAN:
                     result = MeterSphereUtils.runTestPlan(client, realProjectId, mode, testPlanId, resourcePoolId, openMode, envMap);
                     break;
-                case Method.TEST_PLAN_NAME:
-                    String testPlanName = Util.replaceMacro(this.testPlanName, environment);
-
-                    List<TestPlanDTO> testPlans = client.getTestPlanIds(realProjectId, workspaceId);
-                    Optional<TestPlanDTO> first = testPlans.stream()
-                            .filter(plan -> StringUtils.equals(testPlanName, plan.getId()) || StringUtils.equals(testPlanName, plan.getName()))
-                            .findFirst();
-
-                    if (!first.isPresent()) {
-                        log("测试计划不存在");
-                        run.setResult(Result.FAILURE);
-                        return;
-                    }
-                    result = MeterSphereUtils.runTestPlan(client, realProjectId, mode, first.get().getId(), resourcePoolId, openMode, envMap);
-                    break;
-                case Method.SINGLE:
-                    testCases = client.getTestCases(realProjectId);//项目下
-                    firstCase = testCases.stream()
-                            .filter(testCase -> StringUtils.equals(testCaseId, testCase.getId()))
-                            .findFirst();
-                    if (!firstCase.isPresent()) {
-                        log("测试不存在");
-                        run.setResult(Result.FAILURE);
-                        return;
-                    }
-                    result = MeterSphereUtils.getTestStepsBySingle(client, realProjectId, firstCase.get(), testPlanId, resourcePoolId, openMode);
-                    break;
-                case Method.SINGLE_NAME:
-                    String testCaseName = Util.replaceMacro(this.testCaseName, environment);
-                    testCases = client.getTestCases(realProjectId);//项目下
-                    firstCase = testCases.stream()
-                            .filter(testCase -> StringUtils.equals(testCaseName, testCase.getId()) ||
-                                    StringUtils.equals(testCaseName, testCase.getName() + " [" + testCase.getType() + "]" + " [" + testCase.getVersionName() + "]"))
-                            .findFirst();
-
-                    if (!firstCase.isPresent()) {
-                        log("测试不存在");
-                        run.setResult(Result.FAILURE);
-                        return;
-                    }
-                    result = MeterSphereUtils.getTestStepsBySingle(client, realProjectId, firstCase.get(), testPlanId, resourcePoolId, openMode);
-                    break;
                 default:
                     run.setResult(Result.FAILURE);
                     log("测试用例不存在");
@@ -184,6 +139,7 @@ public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Seri
 
     }
 
+    @Override
     public BuildStepMonitor getRequiredMonitorService() {
         return BuildStepMonitor.STEP;
     }
@@ -298,75 +254,6 @@ public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Seri
             return items;
         }
 
-        //该项目下所有的接口和性能测试
-        public ListBoxModel doFillTestCaseIdItems(@QueryParameter String msAccessKey,
-                                                  @QueryParameter String msSecretKey,
-                                                  @QueryParameter String msEndpoint,
-                                                  @QueryParameter String projectId,
-                                                  @QueryParameter String projectName
-        ) {
-            ListBoxModel items = new ListBoxModel();
-            try {
-                MeterSphereClient meterSphereClient = new MeterSphereClient(msAccessKey, msSecretKey, msEndpoint);
-                items.add("请选择测试名称", "");
-                if (StringUtils.isNotBlank(projectName)) {
-                    Optional<ProjectDTO> first = projectList.stream()
-                            .filter(projectDTO -> StringUtils.equals(projectName, projectDTO.getId()) || StringUtils.equals(projectName, projectDTO.getName()))
-                            .findFirst();
-                    first.ifPresent(projectDTO -> testList = meterSphereClient.getTestCases(projectDTO.getId()));
-                } else {
-                    if (projectId != null && !projectId.equals("")) {
-                        testList = meterSphereClient.getTestCases(projectId);
-                    }
-                }
-
-                if (testList != null && testList.size() > 0) {
-                    for (TestCaseDTO c : testList) {
-                        items.add(c.getName() + " [" + c.getType() + "]" + " [" + c.getVersionName() + "]", c.getId());
-                    }
-                }
-
-            } catch (Exception e) {
-                LogUtil.error(e.getMessage(), e);
-            }
-            return items;
-        }
-
-        //接口测试的运行环境的列表
-        public ListBoxModel doFillEnvironmentIdItems(@QueryParameter String msAccessKey,
-                                                     @QueryParameter String msSecretKey,
-                                                     @QueryParameter String msEndpoint,
-                                                     @QueryParameter String projectId,
-                                                     @QueryParameter String projectName) {
-            ListBoxModel items = new ListBoxModel();
-            try {
-                MeterSphereClient meterSphereClient = new MeterSphereClient(msAccessKey, msSecretKey, msEndpoint);
-                items.add("请选择运行环境", "");
-                List<ApiTestEnvironmentDTO> list = new ArrayList<>();
-                if (StringUtils.isNotBlank(projectName)) {
-                    Optional<ProjectDTO> first = projectList.stream()
-                            .filter(projectDTO -> StringUtils.equals(projectName, projectDTO.getId()) || StringUtils.equals(projectName, projectDTO.getName()))
-                            .findFirst();
-                    if (first.isPresent()) {
-                        list = meterSphereClient.getEnvironmentIds(first.get().getId());
-                    }
-                } else {
-                    if (projectId != null && !projectId.equals("")) {
-                        list = meterSphereClient.getEnvironmentIds(projectId);
-                    }
-                }
-                if (list != null && list.size() > 0) {
-                    for (ApiTestEnvironmentDTO c : list) {
-                        items.add(c.getName(), c.getId());
-                    }
-                }
-
-            } catch (Exception e) {
-                LogUtil.error(e.getMessage(), e);
-            }
-            return items;
-        }
-
         //资源池的选择
         public ListBoxModel doFillResourcePoolIdItems(@QueryParameter String msAccessKey,
                                                       @QueryParameter String msSecretKey,
@@ -390,48 +277,6 @@ public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Seri
             return items;
         }
 
-        public AutoCompletionCandidates doAutoCompleteTestPlanName(@QueryParameter String value) {
-            AutoCompletionCandidates c = new AutoCompletionCandidates();
-            if (StringUtils.isBlank(value)) {
-                testPlanList.stream().map(TestPlanDTO::getName).forEach(c::add);
-            } else {
-                testPlanList.stream().map(TestPlanDTO::getName).forEach(v -> {
-                    if (v.toLowerCase().contains(value.toLowerCase())) {
-                        c.add(v);
-                    }
-                });
-            }
-
-            return c;
-        }
-
-        public AutoCompletionCandidates doAutoCompleteTestCaseName(@QueryParameter String value) {
-            AutoCompletionCandidates c = new AutoCompletionCandidates();
-            List<TestCaseDTO> list = new ArrayList<>();
-            testList.forEach(test -> {
-                try {
-                    TestCaseDTO clone = (TestCaseDTO) BeanUtils.cloneBean(test);
-                    clone.setName(clone.getName() + " [" + clone.getType() + "]" + " [" + clone.getVersionName() + "]");
-                    list.add(clone);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            });
-
-            if (StringUtils.isBlank(value)) {
-                list.stream().map(TestCaseDTO::getName).forEach(c::add);
-            } else {
-                list.stream().map(TestCaseDTO::getName).forEach(v -> {
-                    if (v.toLowerCase().contains(value.toLowerCase())) {
-                        c.add(v);
-                    }
-                });
-            }
-
-            return c;
-        }
-
-
         @Override
         public boolean configure(StaplerRequest req, JSONObject formData) throws FormException {
             req.bindParameters(this);
@@ -439,14 +284,15 @@ public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Seri
             return super.configure(req, formData);
         }
 
+        @Override
         public boolean isApplicable(Class<? extends AbstractProject> aClass) {
             return true;
         }
 
+        @Override
         public String getDisplayName() {
             return "MeterSphere";
         }
-
     }
 
     @Override
@@ -485,16 +331,6 @@ public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Seri
     }
 
     @DataBoundSetter
-    public void setTestPlanName(String testPlanName) {
-        this.testPlanName = testPlanName;
-    }
-
-    @DataBoundSetter
-    public void setTestCaseId(String testCaseId) {
-        this.testCaseId = testCaseId;
-    }
-
-    @DataBoundSetter
     public void setResult(String result) {
         this.result = result;
     }
@@ -529,11 +365,6 @@ public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Seri
         this.openMode = StringUtils.isBlank(openMode) ? "auth" : openMode;
     }
 
-    @DataBoundSetter
-    public void setTestCaseName(String testCaseName) {
-        this.testCaseName = testCaseName;
-    }
-
     public String getMsEndpoint() {
         return msEndpoint;
     }
@@ -566,14 +397,6 @@ public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Seri
         return testPlanId;
     }
 
-    public String getTestPlanName() {
-        return testPlanName;
-    }
-
-    public String getTestCaseId() {
-        return testCaseId;
-    }
-
     public String getMethod() {
         return method;
     }
@@ -601,9 +424,5 @@ public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Seri
 
     public String getResourcePoolId() {
         return resourcePoolId;
-    }
-
-    public String getTestCaseName() {
-        return testCaseName;
     }
 }

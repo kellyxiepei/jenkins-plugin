@@ -35,24 +35,6 @@
                 <f:select/>
             </f:entry>
         </f:radioBlock>
-        <f:radioBlock title="输入计划名称" name="method" value="testPlanName" inline="true"
-                      checked="${instance.method == 'testPlanName'}">
-            <f:entry title="" field="testPlanName">
-                <f:textbox/>
-            </f:entry>
-        </f:radioBlock>
-        <f:radioBlock title="选择测试执行" name="method" value="single" inline="true"
-                      checked="${instance.method == 'single'}">
-            <f:entry title="" field="testCaseId">
-                <f:select/>
-            </f:entry>
-        </f:radioBlock>
-        <f:radioBlock title="输入测试名称" name="method" value="singleName" inline="true"
-                      checked="${instance.method == 'singleName'}">
-            <f:entry title="" field="testCaseName">
-                <f:textbox/>
-            </f:entry>
-        </f:radioBlock>
     </f:section>
     <f:entry title="运行环境" field="runEnv">
             <f:textbox/>
