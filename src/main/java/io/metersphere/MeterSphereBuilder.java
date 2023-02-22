@@ -71,14 +71,14 @@ public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Seri
         listener.getLogger().println("url=" + run.getUrl());
 
         EnvVars environment = run.getEnvironment(listener);
-        customizedVars = Util.replaceMacro(customizedVars, environment);
+        String realCustomizedVars = Util.replaceMacro(customizedVars, environment);
 
         final MeterSphereClient client = new MeterSphereClient(this.msAccessKey, this.msSecretKey, this.msEndpoint);
         final EnvironmentManager environmentManager = new EnvironmentManager(client);
 
         log("执行方式: " + method);
         log("运行环境：" + runEnv);
-        log("自定义变量：" + customizedVars);
+        log("自定义变量：" + realCustomizedVars);
         String tempRunEnv = runEnv + UUID.randomUUID();
         log("临时运行环境：" + tempRunEnv);
         String realProjectId = null;
@@ -106,7 +106,7 @@ public class MeterSphereBuilder extends Builder implements SimpleBuildStep, Seri
             }
             //创建运行环境
             Map<String, String> variableOverrideMap = new HashMap<>();
-            JSON.parseObject(customizedVars).forEach((key, value) -> {
+            JSON.parseObject(realCustomizedVars).forEach((key, value) -> {
                 variableOverrideMap.put(key, value.toString());
             });
             environmentManager.copyEnvironmentAndSetVariables(realProjectId, runEnv, tempRunEnv, variableOverrideMap);
